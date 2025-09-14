@@ -157,7 +157,7 @@ def get_mysql_user(name: str):
 
 @app.post("/mysql/users", tags=['Mysql'])
 def create_mysql_user(user: MySQLUserBase):
-    return hs_add("mysqluser", user.dict())
+    return hs_add("mysqluser", user.model_dump())
 
 @app.put("/mysql/users/{name}", tags=['Mysql'])
 def update_mysql_user(name: str, user: MySQLUserUpdate):
@@ -179,7 +179,7 @@ def get_mysql_db(name: str):
 
 @app.post("/mysql/dbs", tags=['Mysql'])
 def create_mysql_db(db: MySQLDBBase):
-    return hs_add("mysqldb", db.dict())
+    return hs_add("mysqldb", db.model_dump())
 
 @app.put("/mysql/dbs/{name}", tags=['Mysql'])
 def update_mysql_db(name: str, db: MySQLDBUpdate):
@@ -200,13 +200,13 @@ def get_pg_user(name: str):
 
 @app.post("/pg/users", tags=['Pgsql'])
 def create_pg_user(user: PGUserBase):
-    return hs_add("pguser", user.dict())
+    return hs_add("pguser", user.model_dump())
 
 @app.put("/pg/users/{name}", tags=['Pgsql'])
 def update_pg_user(name: str, user: PGUserUpdate):
-    if not user.dict(exclude_none=True):
+    if not user.model_dump(exclude_none=True):
         raise HTTPException(status_code=400, detail="No fields to update provided")
-    return hs_update("pguser", {"name": name}, user.dict(exclude_none=True))
+    return hs_update("pguser", {"name": name}, user.model_dump(exclude_none=True))
 
 @app.delete("/pg/users/{name}", tags=['Pgsql'])
 def delete_pg_user(name: str):
