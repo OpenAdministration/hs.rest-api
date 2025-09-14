@@ -3,5 +3,7 @@ dotenv~=0.9.9
 python-dotenv~=1.1.1
 fastapi~=0.116.1
 pydantic~=2.11.7
-uvicorn
+uvicorn[standard]
 python-multipart
+starlette~=0.47.3
+cachetools~=6.2.0

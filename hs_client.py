@@ -2,6 +2,8 @@ import os
 import re
 import requests
 import xmlrpc.client
+
+from cachetools import cached, LRUCache, TTLCache
 from dotenv import load_dotenv
 
 # Load credentials from .env
@@ -13,6 +15,8 @@ CAS_URL = "https://login.hostsharing.net/cas/v1/tickets"
 SERVICE = "https://config.hostsharing.net:443/hsar/backend"
 BACKEND = "https://config.hostsharing.net:443/hsar/xmlrpc/hsadmin"
 
+
+@cached(cache=TTLCache(maxsize=1024, ttl=600))
 def get_ticket_grant() -> str:
     # Ticket-Granting Ticket (TGT) holen
     resp = requests.post(
