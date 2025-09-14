@@ -3,7 +3,7 @@ import re
 import requests
 import xmlrpc.client
 
-from cachetools import cached, LRUCache, TTLCache
+from cachetools import cached, TTLCache
 from dotenv import load_dotenv
 
 # Load credentials from .env
@@ -16,7 +16,7 @@ SERVICE = "https://config.hostsharing.net:443/hsar/backend"
 BACKEND = "https://config.hostsharing.net:443/hsar/xmlrpc/hsadmin"
 
 
-@cached(cache=TTLCache(maxsize=1024, ttl=600))
+@cached(cache=TTLCache(maxsize=1024, ttl=3000))
 def get_ticket_grant() -> str:
     # Ticket-Granting Ticket (TGT) holen
     resp = requests.post(
