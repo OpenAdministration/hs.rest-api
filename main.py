@@ -16,12 +16,16 @@ app = FastAPI(title="Hostsharing HS-Admin API", version="1.0.0")
 # Endpoints
 # -----------------------------
 
+not_found_response = {
+    404: {"description": "Item not found"},
+}
+
 @app.get("/hsapi")
 def properties_search():
     """Fetch Hostsharing API information."""
     return hs_api()
 
-@app.get("/domain/{name}", tags=['Domain'])
+@app.get("/domain/{name}", tags=['Domain'], responses=not_found_response)
 def get_domain(name: str) -> DomainOut:
     result = hs_search("domain",  {'name': name})
     if not result:
@@ -45,7 +49,7 @@ def delete_domain(name: str):
     return hs_delete("domain", {"name": name})
 
 
-@app.get("/user/{name}", response_model=User, tags=['User'])
+@app.get("/user/{name}", response_model=User, tags=['User'], responses=not_found_response)
 def get_user(name: str) :
     result = hs_search("user",  {'name': name})
     if not result:
@@ -72,7 +76,7 @@ def update_user(name: str, user: User):
 def delete_user(name: str):
     return hs_delete("user", {"name": name})
 
-@app.get("/email/{localpart}@{domain}", tags=['Email'])
+@app.get("/email/{localpart}@{domain}", tags=['Email'], responses=not_found_response)
 def get_email(domain: str, localpart : str = "") -> EmailOut:
     result = hs_search("emailaddress", {"localpart": localpart, "domain": domain})
     if not result:
@@ -84,7 +88,7 @@ def search_email(domain: str = None, localpart : str = None, target : List[str] 
     """Suche E-Mail-Adressen nach localpart oder Domain.
     Angegebene, aber leere Localparts suchen nach der Catch-all Adresse
 
-    Vorsicht! Target muss EXAKT korrekt sein, auch die Reihenfolge der targets muss für einen Suchtreffer stimmen"""
+    Vorsicht! Target muss EXAKT korrekt sein, auch die Reihenfolge der elemente muss für einen Suchtreffer stimmen; praktisch ist diese funktion als kaum zu gebrauchen"""
     query = {}
     if domain is not None:
         query["domain"] = domain
@@ -148,7 +152,7 @@ def delete_email(localpart: str, domain: str):
     return hs_delete("emailaddress", {"localpart": localpart, "domain": domain})
 
 
-@app.get("/mysql/users/{name}", tags=['Mysql'])
+@app.get("/mysql/user{name}", tags=['Mysql'], responses=not_found_response)
 def get_mysql_user(name: str):
     res = hs_search("mysqluser", {"name": name})
     if not res:
@@ -159,18 +163,18 @@ def get_mysql_user(name: str):
 def create_mysql_user(user: MySQLUserBase):
     return hs_add("mysqluser", user.model_dump())
 
-@app.put("/mysql/users/{name}", tags=['Mysql'])
+@app.put("/mysql/user{name}", tags=['Mysql'])
 def update_mysql_user(name: str, user: MySQLUserUpdate):
     if not user.model_dump(exclude_none=True):
         raise HTTPException(status_code=400, detail="No fields to update provided")
     return hs_update("mysqluser", {"name": name}, user.model_dump(exclude_none=True))
 
-@app.delete("/mysql/users/{name}", tags=['Mysql'])
+@app.delete("/mysql/user{name}", tags=['Mysql'])
 def delete_mysql_user(name: str):
     return hs_delete("mysqluser", {"name": name})
 
 
-@app.get("/mysql/dbs/{name}", tags=['Mysql'])
+@app.get("/mysql/db/{name}", tags=['Mysql'], responses=not_found_response)
 def get_mysql_db(name: str):
     res = hs_search("mysqldb", {"name": name})
     if not res:
@@ -181,17 +185,17 @@ def get_mysql_db(name: str):
 def create_mysql_db(db: MySQLDBBase):
     return hs_add("mysqldb", db.model_dump())
 
-@app.put("/mysql/dbs/{name}", tags=['Mysql'])
+@app.put("/mysql/db/{name}", tags=['Mysql'])
 def update_mysql_db(name: str, db: MySQLDBUpdate):
     if not db.model_dump(exclude_none=True):
         raise HTTPException(status_code=400, detail="No fields to update provided")
     return hs_update("mysqldb", {"name": name}, db.model_dump(exclude_none=True))
 
-@app.delete("/mysql/dbs/{name}", tags=['Mysql'])
+@app.delete("/mysql/db/{name}", tags=['Mysql'])
 def delete_mysql_db(name: str):
     return hs_delete("mysqldb", {"name": name})
 
-@app.get("/pg/users/{name}", tags=['Pgsql'])
+@app.get("/pg/user{name}", tags=['Pgsql'], responses=not_found_response)
 def get_pg_user(name: str):
     res = hs_search("pguser", {"name": name})
     if not res:
@@ -202,18 +206,18 @@ def get_pg_user(name: str):
 def create_pg_user(user: PGUserBase):
     return hs_add("pguser", user.model_dump())
 
-@app.put("/pg/users/{name}", tags=['Pgsql'])
+@app.put("/pg/user{name}", tags=['Pgsql'])
 def update_pg_user(name: str, user: PGUserUpdate):
     if not user.model_dump(exclude_none=True):
         raise HTTPException(status_code=400, detail="No fields to update provided")
     return hs_update("pguser", {"name": name}, user.model_dump(exclude_none=True))
 
-@app.delete("/pg/users/{name}", tags=['Pgsql'])
+@app.delete("/pg/user{name}", tags=['Pgsql'])
 def delete_pg_user(name: str):
     return hs_delete("pguser", {"name": name})
 
 
-@app.get("/pg/dbs/{name}", tags=['Pgsql'])
+@app.get("/pg/db/{name}", tags=['Pgsql'], responses=not_found_response)
 def get_pg_db(name: str):
     res = hs_search("pgdb", {"name": name})
     if not res:
@@ -224,7 +228,7 @@ def get_pg_db(name: str):
 def create_pg_db(db: PGDBBase):
     return hs_add("pgdb", db.model_dump())
 
-@app.put("/pg/dbs/{name}", tags=['Pgsql'])
+@app.put("/pg/db/{name}", tags=['Pgsql'])
 def update_pg_db(name: str, db: PGDBUpdate):
     try:
         if not db.model_dump(exclude_none=True):
@@ -233,7 +237,7 @@ def update_pg_db(name: str, db: PGDBUpdate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/pg/dbs/{name}", tags=['Pgsql'])
+@app.delete("/pg/db/{name}", tags=['Pgsql'])
 def delete_pg_db(name: str):
     try:
         return hs_delete("pgdb", {"name": name})
