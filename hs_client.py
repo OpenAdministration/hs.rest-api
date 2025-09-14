@@ -1,10 +1,12 @@
 import os
 import re
-import requests
 import xmlrpc.client
+from xmlrpc.client import Fault
 
+import requests
 from cachetools import cached, TTLCache
 from dotenv import load_dotenv
+from fastapi import HTTPException
 
 # Load credentials from .env
 load_dotenv()
@@ -41,14 +43,17 @@ def get_service_ticket() -> str:
     return resp.text.strip()
 
 # ---------- Step 3: XML-RPC Call ----------
-def hs_call(method: str, param1, param2 = None) -> list:
+def hs_call(method: str, param1, param2=None) -> list:
     service_ticket = get_service_ticket()
     server = xmlrpc.client.ServerProxy(BACKEND)
     remote = getattr(server, method)
+
     if param2:
         return remote(HS_USER, service_ticket, param1, param2)
     else:
         return remote(HS_USER, service_ticket, param1)
+
+
 
 def hs_search(module: str, where : dict) -> list:
     method = module + ".search"
@@ -63,8 +68,12 @@ def hs_delete(module: str, where : dict) -> list:
     return hs_call(method, where)
 
 def hs_add(module: str, set : dict) -> list:
-    method = module + ".add"
-    return hs_call(method, set)
+    try:
+        method = module + ".add"
+        return hs_call(method, set)
+    except Fault as e:
+        print(e)
+        raise HTTPException(status_code=400, detail="Fehlerhafte Eingaben")
 
 def hs_api():
     return hs_call('property.search', {})
