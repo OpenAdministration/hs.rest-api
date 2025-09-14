@@ -76,8 +76,7 @@ def all_users():
 @app.post("/user", tags=['User'])
 def add_user(user: CreateUser):
     try:
-        params = {"name": user.name, "password": user.password, "shell": user.shell}
-        return hs_add("user", params)
+        return hs_add("user", user.model_dump(exclude_none=True))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
