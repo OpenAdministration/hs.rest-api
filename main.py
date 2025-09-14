@@ -1,6 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from typing import List, Optional, Annotated
 
+from fastapi.openapi.models import Response
+from starlette import status
+
 from hs_client import hs_search, hs_add, hs_update, hs_delete, hs_api
 
 from Models.domain import DomainCreate, DomainUpdate, DomainOut
@@ -84,11 +87,7 @@ def add_user(user: CreateUser):
 @app.put("/user/{name}", tags=['User'])
 def update_user(name: str, user: User):
     try:
-        set_params = user.parameters
-        if not set_params:
-            raise HTTPException(status_code=400, detail="No fields to update provided")
-
-        return hs_update("user", {"name": name}, set_params)
+        return hs_update("user", {"name": name}, user.model_dump(exclude_none=True))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -143,6 +142,34 @@ def update_email(domain: str, update : EmailUpdate, localpart: str = "") -> List
     """Update von targets bei einer bestimmten Mailadresse"""
     try:
         return hs_update("emailaddress", {"localpart": localpart, "domain": domain}, update.model_dump())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/email/{localpart}@{domain}/target", tags=['Email'])
+def add_email_target(domain: str, update : EmailUpdate, localpart: str = "") -> List[EmailOut]:
+    """Adds a (list of) email targets to the list"""
+    try:
+         search_result = hs_search("emailaddress", {"localpart": localpart, "domain": domain})
+         mail = search_result[0]
+         new_target = mail["target"] + update.target
+         return hs_update("emailaddress", where={"localpart": localpart, "domain": domain}, set={"target": new_target})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/email/{localpart}@{domain}/target", tags=['Email'])
+def add_email_target(domain: str, update : EmailUpdate, localpart: str = "") -> Response | List[EmailOut]:
+    """Removes a (list of) email targets from the list"""
+    try:
+         search_result = hs_search("emailaddress", {"localpart": localpart, "domain": domain})
+         mail = search_result[0]
+         new_target = list(set(mail["target"]) - set(update.target))
+         if not new_target:
+            # new target set is empty -> delete the mail
+            hs_delete("emailaddress", where={"localpart": localpart, "domain": domain})
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+         else:
+            # targets are not empty
+            return hs_update("emailaddress", where={"localpart": localpart, "domain": domain}, set={"target": new_target})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
