@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from typing import List, Optional, Annotated
 
-from fastapi.openapi.models import Response
 from starlette import status
+from starlette.responses import Response
 
 from hs_client import hs_search, hs_add, hs_update, hs_delete, hs_api
 
@@ -157,8 +157,11 @@ def add_email_target(domain: str, update : EmailUpdate, localpart: str = "") -> 
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/email/{localpart}@{domain}/target", tags=['Email'])
-def add_email_target(domain: str, update : EmailUpdate, localpart: str = "") -> Response | List[EmailOut]:
-    """Removes a (list of) email targets from the list"""
+def add_email_target(response: Response, domain: str, update : EmailUpdate, localpart: str = "", ) -> List[EmailOut]:
+    """Removes a (list of) email targets from the list
+    if there is a target left the Email-Address is returned
+    if there is no target left the Email-Address is deleted and status 204 is returned
+    """
     try:
          search_result = hs_search("emailaddress", {"localpart": localpart, "domain": domain})
          mail = search_result[0]
@@ -166,7 +169,8 @@ def add_email_target(domain: str, update : EmailUpdate, localpart: str = "") -> 
          if not new_target:
             # new target set is empty -> delete the mail
             hs_delete("emailaddress", where={"localpart": localpart, "domain": domain})
-            return Response(status_code=status.HTTP_204_NO_CONTENT)
+            response.status_code = 204
+            return []
          else:
             # targets are not empty
             return hs_update("emailaddress", where={"localpart": localpart, "domain": domain}, set={"target": new_target})
