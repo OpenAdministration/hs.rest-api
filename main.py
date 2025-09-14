@@ -112,17 +112,22 @@ def get_email(domain: str, localpart : str = "") -> EmailOut:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/email/search", tags=['Email'])
-def search_email(search : EmailIn) -> List[EmailOut]:
+def search_email(domain: str = None, localpart : str = None, target : List[str] = None) -> List[EmailOut]:
     """Suche E-Mail-Adressen nach localpart oder Domain.
     Angegebene, aber leere Localparts suchen nach der Catch-all Adresse
 
     Vorsicht! Target muss EXAKT korrekt sein, auch die Reihenfolge der targets muss für einen Suchtreffer stimmen"""
     try:
-        model = search.model_dump(exclude_none=True)
-        if "target" in model:
+        query = {}
+        if domain is not None:
+            query["domain"] = domain
+        if localpart is not None:
+            query["localpart"] = localpart
+        if target is not None:
             # hs api expects comma separated string, not array, so we fix that
-            model['target'] = ",".join(model["target"])
-        return hs_search("emailaddress", model)
+            query["target"] = ",".join(target)
+
+        return hs_search("emailaddress", query)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
