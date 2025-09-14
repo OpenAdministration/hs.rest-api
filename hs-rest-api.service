@@ -1,0 +1,11 @@
+[Unit]
+Description=hs.rest-api Uvicorn Service
+After=network.target
+
+[Service]
+WorkingDirectory=%h/hs.rest-api
+ExecStart=%h/hs.rest-api/venv/uvicorn main:app --host 127.0.0.1 --port 8000
+Restart=always
+
+[Install]
+WantedBy=default.target
