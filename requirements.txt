@@ -7,3 +7,4 @@ uvicorn[standard]
 python-multipart
 starlette~=0.47.3
 cachetools~=6.2.0
+gunicorn
