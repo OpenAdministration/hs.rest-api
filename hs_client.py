@@ -97,8 +97,3 @@ def hs_add(request: Request, module: str, set : dict) -> list:
 
 def hs_api(request: Request):
     return hs_call(request, 'property.search', {})
-
-#print(hs_add('user', {'name':'oad02-mustermann', 'comment': 'Max Mustermann','password':'!1?2-3aBcasdasd','shell':'/bin/bash'}))
-#print(hs_update('user', {'name' : 'oad02-mustermann'},{'password' : 'Glompf-123'}))
-#print(hs_search('user', {'name': 'oad02-mustermann'}))
-#print(hs_delete('user', {'name': 'oad02-mustermann'}))
