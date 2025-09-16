@@ -33,20 +33,20 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Then copy the `.env.example` file and put in your credentials to start.
+Then copy the `env.example.yaml` file to your custom `env.yaml` and put in your credentials to start.
 
 ## Running the Application
 
 ### Production
 
 ```bash
-mkdir -p ~/.config/sytemd/user
-cp ~/hs.rest-api/hs-rest-api.service  ~/.config/sytemd/user
+mkdir -p ~/.config/systemd/user
+cp ~/hs.rest-api/hs-rest-api.service  ~/.config/systemd/user
 systemctl --user daemon-reload
 systemctl --user enable hs-rest-api.service
 systemctl --user start hs-rest-api.service
 ```
-
+Adapt the port in the service file as needed
 ### Development Mode
 
 You can run the REST API with hot reload for development using `uvicorn`:

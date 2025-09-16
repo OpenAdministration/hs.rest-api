@@ -15,7 +15,7 @@ BACKEND = "https://config.hostsharing.net:443/hsar/xmlrpc/hsadmin"
 
 @cached(Cache(maxsize=float("inf")))
 def get_credentials(api_key : str) -> dict[str,str]:
-    with open("credentials.yaml", "r") as file:
+    with open("env.yaml", "r") as file:
         data = yaml.safe_load(file)
         api_entries = list(api for api in data['api'] if api['key'] == api_key)
         if len(api_entries) != 1:
