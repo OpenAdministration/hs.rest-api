@@ -1,3 +1,5 @@
 .idea
 .venv
 .env
+credentials.yaml
+credentials.yml
