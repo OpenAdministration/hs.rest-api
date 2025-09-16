@@ -46,7 +46,7 @@ systemctl --user daemon-reload
 systemctl --user enable hs-rest-api.service
 systemctl --user start hs-rest-api.service
 ```
-Adapt the port in the service file as needed
+Adapt the port in the `env.yaml` file as needed
 ### Development Mode
 
 You can run the REST API with hot reload for development using `uvicorn`:
