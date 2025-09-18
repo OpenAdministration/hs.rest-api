@@ -1,17 +1,65 @@
-import os
+from collections.abc import Generator
+from contextlib import contextmanager
+import datetime
 import re
+import threading
 import xmlrpc.client
 from xmlrpc.client import Fault
 
 import requests
 import yaml
-from cachetools import cached, TTLCache, Cache
+from cachetools import cached, Cache
 from fastapi import HTTPException, Request
 
 # Load credentials from .env
 CAS_URL = "https://login.hostsharing.net/cas/v1/tickets"
 SERVICE = "https://config.hostsharing.net:443/hsar/backend"
 BACKEND = "https://config.hostsharing.net:443/hsar/xmlrpc/hsadmin"
+
+class GrantPools:
+    """
+    A grant can only have one active ticket at a time. If you fetch a new ticket old tickets become invalid. So if we want to handle multiple requests concurently we need to reserve the grant for the duration of the request.
+
+    To help, this class handles one pool of grants for each username/password combination. The acquire Method provides an exclusive grant.
+    """
+    def __init__(self) -> None:
+        self.pools = dict[(str, str), list[tuple[str, datetime.datetime]]]()
+        self.lock = threading.Lock()
+    
+    @contextmanager
+    def acquire(self, username: str, password: str) -> Generator[str]:
+        """
+        Use with a with statement to temporarily acquire a grant. The grant will be automatically returned on leaving the block. E.g. after the request
+        """
+        key = (username, password)
+        (grant, validity) = self._try_get_grant(key)
+        if grant is None:
+            grant = get_ticket_grant(username, password)
+            validity = datetime.datetime.now() + datetime.timedelta(seconds=3000)
+        try:
+            yield grant
+        finally:
+            self._put_grant(key, (grant, validity))
+    
+
+    def _try_get_grant(self, key) -> tuple[str, datetime.datetime] | tuple[None, None]:
+        with self.lock:
+            if key not in self.pools:
+                self.pools[key] = []
+            grants = self.pools[key]
+            while len(grants) > 0:
+                (grant, validity) = grants.pop(0)
+                if validity > datetime.datetime.now():
+                    return grant, validity
+        return None, None
+    
+    def _put_grant(self, key, grant):
+        with self.lock:
+            if key not in self.pools:
+                self.pools[key] = []
+            self.pools[key].append(grant)
+
+grantPools = GrantPools()
 
 @cached(Cache(maxsize=float("inf")))
 def get_credentials(api_key : str) -> dict[str,str]:
@@ -27,7 +75,6 @@ def get_credentials(api_key : str) -> dict[str,str]:
         return filtered_creds
 
 
-@cached(cache=TTLCache(maxsize=1024, ttl=3000))
 def get_ticket_grant(username: str, password: str) -> str:
     # Ticket-Granting Ticket (TGT) holen
     resp = requests.post(
@@ -42,10 +89,10 @@ def get_ticket_grant(username: str, password: str) -> str:
     return tgt_url
 
 # ---------- Step 1+2: CAS Authentication ----------
-def get_service_ticket(pac: str, password : str) -> str:
+def get_service_ticket(grant: str) -> str:
     # Service-Ticket holen
     resp = requests.post(
-        get_ticket_grant(pac, password),
+        grant,
         data={"service": SERVICE},
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
@@ -64,14 +111,15 @@ def hs_call(request: Request, method: str, param1, param2=None) -> list:
         username = headers.get("PAC")
     else:
         raise HTTPException(400, f"PAC {headers.get("PAC")} is not configured in this API, please check your credentials.yaml file")
-    service_ticket = get_service_ticket(username, credentials[username])
-    server = xmlrpc.client.ServerProxy(BACKEND)
-    remote = getattr(server, method)
+    with grantPools.acquire(username, credentials[username]) as grant:
+        service_ticket = get_service_ticket(grant)
+        server = xmlrpc.client.ServerProxy(BACKEND)
+        remote = getattr(server, method)
 
-    if param2:
-        return remote(username, service_ticket, param1, param2)
-    else:
-        return remote(username, service_ticket, param1)
+        if param2:
+            return remote(username, service_ticket, param1, param2)
+        else:
+            return remote(username, service_ticket, param1)
 
 
 
