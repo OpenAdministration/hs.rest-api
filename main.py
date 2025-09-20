@@ -112,11 +112,13 @@ def create_email(request: Request, mail: EmailIn):
     return hs_add(request, "emailaddress", mail.model_dump())
 
 
+@app.put("/email/@{domain}", tags=['Email'])
 @app.put("/email/{localpart}@{domain}", tags=['Email'])
 def update_email(request: Request, domain: str, update : EmailUpdate, localpart: str = "") -> List[EmailOut]:
     """Update von targets bei einer bestimmten Mailadresse"""
     return hs_update(request, "emailaddress", {"localpart": localpart, "domain": domain}, update.model_dump())
 
+@app.post("/email/@{domain}/target", tags=['Email'])
 @app.post("/email/{localpart}@{domain}/target", tags=['Email'])
 def add_email_target(request: Request, domain: str, update : EmailUpdate, localpart: str = "") -> List[EmailOut]:
     """Adds a (list of) email targets to the list"""
@@ -125,6 +127,7 @@ def add_email_target(request: Request, domain: str, update : EmailUpdate, localp
     new_target = mail["target"] + update.target
     return hs_update(request, "emailaddress", where={"localpart": localpart, "domain": domain}, set={"target": new_target})
 
+@app.delete("/email/@{domain}/target", tags=['Email'])
 @app.delete("/email/{localpart}@{domain}/target", tags=['Email'])
 def remove_email_target(request: Request, response: Response, domain: str, update : EmailUpdate, localpart: str = "", ) -> List[EmailOut]:
     """Removes a (list of) email targets from the list
@@ -155,7 +158,8 @@ def update_email(request: Request, update : EmailUpdate, domain: str = None, loc
 
 
 @app.delete("/email/{localpart}@{domain}", tags=['Email'])
-def delete_email(request: Request, localpart: str, domain: str):
+@app.delete("/email/@{domain}", tags=['Email'])
+def delete_email(request: Request, domain: str, localpart: str = ""):
     return hs_delete(request, "emailaddress", {"localpart": localpart, "domain": domain})
 
 
