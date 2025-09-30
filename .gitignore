@@ -3,6 +3,9 @@
 credentials.yaml
 credentials.yml
 env.yaml
+openapi.yaml
+openapi.yml
+openapi.json
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python

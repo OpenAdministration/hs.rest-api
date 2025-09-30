@@ -27,8 +27,11 @@ jobs:
       - name: Generate OpenAPI JSON
         run: |
           python -c "from main import app; import json; open('openapi.json', 'w').write(json.dumps(app.openapi()))"
+          python -c "from main import app; import yaml; open('openapi.yaml', 'w').write(yaml.dump(app.openapi()))"
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          files: openapi.json
+          files: |
+            openapi.json
+            openapi.yaml
