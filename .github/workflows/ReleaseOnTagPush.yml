@@ -1,8 +1,9 @@
 name: Add OpenAPI JSON to Release
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*.*.*"
 
 jobs:
   attach-openapi-json:
@@ -27,10 +28,7 @@ jobs:
         run: |
           python -c "from main import app; import json; open('openapi.json', 'w').write(json.dumps(app.openapi()))"
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+      - name: Release
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./openapi.json
-          asset_name: openapi.json
-          asset_content_type: application/json
+          files: openapi.json
