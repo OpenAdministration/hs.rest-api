@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=%h/hs.rest-api
-ExecStart=%h/hs.rest-api/venv/python server.py
+ExecStart=%h/hs.rest-api/venv/bin/python server.py
 Restart=always
 
 [Install]

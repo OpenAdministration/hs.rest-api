@@ -11,7 +11,6 @@ import yaml
 from cachetools import cached, Cache
 from fastapi import HTTPException, Request
 
-# Load credentials from .env
 CAS_URL = "https://login.hostsharing.net/cas/v1/tickets"
 SERVICE = "https://config.hostsharing.net:443/hsar/backend"
 BACKEND = "https://config.hostsharing.net:443/hsar/xmlrpc/hsadmin"
@@ -110,7 +109,8 @@ def hs_call(request: Request, method: str, param1, param2=None) -> list:
     elif headers.get("PAC") in credentials:
         username = headers.get("PAC")
     else:
-        raise HTTPException(400, f"PAC {headers.get("PAC")} is not configured in this API, please check your credentials.yaml file")
+        pac = headers.get("PAC")
+        raise HTTPException(400, f"PAC {pac} is not configured in this API, please check your credentials.yaml file")
     with grantPools.acquire(username, credentials[username]) as grant:
         service_ticket = get_service_ticket(grant)
         server = xmlrpc.client.ServerProxy(BACKEND)
