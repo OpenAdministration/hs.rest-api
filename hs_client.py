@@ -1,8 +1,20 @@
+"""
+Hostsharing HS-Admin XML-RPC client with CAS authentication.
+
+Auth flow per request:
+  1. get_ticket_grant   — POST credentials to CAS, receive a long-lived TGT URL
+  2. get_service_ticket — POST to TGT URL, receive a one-time service ticket
+  3. hs_call            — pass service ticket in the XML-RPC call to the hsadmin backend
+
+TGT URLs are pooled per PAC via GrantPools so concurrent requests don't invalidate each other.
+"""
 from collections.abc import Generator
 from contextlib import contextmanager
 import datetime
+import logging
 import re
 import threading
+import time
 import xmlrpc.client
 from xmlrpc.client import Fault
 
@@ -10,6 +22,8 @@ import requests
 import yaml
 from cachetools import cached, Cache
 from fastapi import HTTPException, Request
+
+logger = logging.getLogger(__name__)
 
 CAS_URL = "https://login.hostsharing.net/cas/v1/tickets"
 SERVICE = "https://config.hostsharing.net:443/hsar/backend"
@@ -61,11 +75,16 @@ class GrantPools:
 grantPools = GrantPools()
 
 @cached(Cache(maxsize=float("inf")))
-def get_credentials(api_key : str) -> dict[str,str]:
+def get_credentials(api_key: str) -> dict[str, str]:
+    """Return {pac: password} for the given API key, loaded from env.yaml.
+
+    Cached indefinitely — restart the server if credentials in env.yaml change.
+    """
     with open("env.yaml", "r") as file:
         data = yaml.safe_load(file)
         api_entries = list(api for api in data['api'] if api['key'] == api_key)
         if len(api_entries) != 1:
+            logger.warning("API key not found: %s...", api_key[:8] if api_key else "None")
             raise HTTPException(500, "API Key not found")
         allowed_pacs = api_entries[0]["pacs"]
         if isinstance(allowed_pacs, str):
@@ -75,7 +94,11 @@ def get_credentials(api_key : str) -> dict[str,str]:
 
 
 def get_ticket_grant(username: str, password: str) -> str:
-    # Ticket-Granting Ticket (TGT) holen
+    """Authenticate with CAS and return the Ticket Granting Ticket (TGT) URL.
+
+    The TGT URL is long-lived and used to obtain per-request service tickets
+    without re-authenticating. CAS embeds it as the action URL in the response HTML.
+    """
     resp = requests.post(
         CAS_URL,
         data={"username": username, "password": password},
@@ -87,9 +110,9 @@ def get_ticket_grant(username: str, password: str) -> str:
     tgt_url = tgt_match.group(1)
     return tgt_url
 
-# ---------- Step 1+2: CAS Authentication ----------
+
 def get_service_ticket(grant: str) -> str:
-    # Service-Ticket holen
+    """Exchange a TGT URL for a single-use service ticket for the hsadmin backend."""
     resp = requests.post(
         grant,
         data={"service": SERVICE},
@@ -97,9 +120,13 @@ def get_service_ticket(grant: str) -> str:
     )
     return resp.text.strip()
 
-# ---------- Step 3: XML-RPC Call ----------
-def hs_call(request: Request, method: str, param1, param2=None) -> list:
 
+def hs_call(request: Request, method: str, param1, param2=None) -> list:
+    """Execute an hsadmin XML-RPC method on behalf of the caller.
+
+    PAC selection: if the API key maps to exactly one PAC it is used automatically;
+    otherwise the caller must supply a PAC header to disambiguate.
+    """
     headers = request.headers
     api_key = headers.get("Authorization")
     credentials = get_credentials(api_key)
@@ -116,10 +143,18 @@ def hs_call(request: Request, method: str, param1, param2=None) -> list:
         server = xmlrpc.client.ServerProxy(BACKEND)
         remote = getattr(server, method)
 
-        if param2:
-            return remote(username, service_ticket, param1, param2)
-        else:
-            return remote(username, service_ticket, param1)
+        logger.info("xmlrpc %s (pac=%s)", method, username)
+        t0 = time.monotonic()
+        try:
+            if param2:
+                result = remote(username, service_ticket, param1, param2)
+            else:
+                result = remote(username, service_ticket, param1)
+        except Exception:
+            logger.exception("xmlrpc %s failed (pac=%s)", method, username)
+            raise
+        logger.debug("xmlrpc %s done in %.0fms", method, (time.monotonic() - t0) * 1000)
+        return result
 
 
 
@@ -140,7 +175,7 @@ def hs_add(request: Request, module: str, set : dict) -> list:
         method = module + ".add"
         return hs_call(request, method, set)
     except Fault as e:
-        print(e)
+        logger.error("xmlrpc Fault in %s: %s", method, e)
         raise HTTPException(status_code=400, detail="Fehlerhafte Eingaben")
 
 def hs_api(request: Request):

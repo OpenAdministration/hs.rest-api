@@ -84,7 +84,6 @@ def get_email(request: Request, domain: str, localpart : str = "") -> EmailOut:
     """
     Localpart ist optional. Ein leerer Localpart beschreibt eine Catch-All Adresse.
     """
-    print(domain, localpart)
     result = hs_search(request, "emailaddress", {"localpart": localpart, "domain": domain})
     if not result:
         raise HTTPException(status_code=404, detail="E-Mail-Adresse nicht gefunden")
