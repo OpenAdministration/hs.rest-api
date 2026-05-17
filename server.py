@@ -7,6 +7,5 @@ with open("env.yaml", "r") as file:
     host = env["host"]
     log = env["log-level"]
     worker = env["worker"]
-
     if __name__ == "__main__":
         uvicorn.run("main:app", host=host, port=port, log_level=log, workers=4)

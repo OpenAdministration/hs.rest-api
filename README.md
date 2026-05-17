@@ -82,7 +82,27 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 > **Warning:** Do not use the built-in server in production!
 
----
+### Container
+
+Podman/Docker
+```
+podman run -d \
+     -p 8000:8000 \
+     -v /path/to/env.yaml:/app/env.yaml:ro \
+     --name hs-rest-api \
+     docker pull ghcr.io/openadministration/hs.rest-api:v.xy
+```
+Or docker-compose.yml:
+```yaml
+services:
+     hs-rest-api:
+          image: docker pull ghcr.io/openadministration/hs.rest-api:v.xy
+          ports:
+               - "8000:8000"
+          volumes:
+               - ./env.yaml:/app/env.yaml:ro
+          restart: unless-stopped
+```
 
 ## Using the API
 
