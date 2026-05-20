@@ -3,8 +3,7 @@ pyyaml
 python-dotenv~=1.1.1
 fastapi>=0.116.1,<0.117.0
 pydantic~=2.11.7
-uvicorn[standard]
+hypercorn
 python-multipart
 starlette~=0.47.3
 cachetools~=6.2.0
-gunicorn

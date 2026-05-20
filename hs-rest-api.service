@@ -1,5 +1,5 @@
 [Unit]
-Description=hs.rest-api Uvicorn Service
+Description=hs.rest-api Service
 After=network.target
 
 [Service]
