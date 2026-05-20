@@ -1,4 +1,4 @@
-import uvicorn
+import subprocess
 import yaml
 
 with open("env.yaml", "r") as file:
@@ -8,4 +8,4 @@ with open("env.yaml", "r") as file:
     log = env["log-level"]
     worker = env["worker"]
     if __name__ == "__main__":
-        uvicorn.run("main:app", host=host, port=port, log_level=log, workers=4)
+        subprocess.run(["hypercorn", "main:app", "--bind", f"{host}:{port}", "--log-level", log, "--workers",str(worker)])

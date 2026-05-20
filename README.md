@@ -73,15 +73,13 @@ Use the built-in FastAPI server for local testing:
 ```bash
 cd ~/hs.rest-api
 source venv/bin/activate
-uvicorn main:app --reload --host 127.0.0.1 --port 8000
+hypercorn main:app --reload --bind 127.0.0.1:8000
 ```
 
 If you want the server accessible externally in a test environment via `xyz00.hostsharing.net`, set the host to `0.0.0.0`. Example:
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+hypercorn main:app --reload --bind 0.0.0.0:8000
 ```
-> **Warning:** Do not use the built-in server in production!
-
 ### Container
 
 Podman/Docker
@@ -90,13 +88,13 @@ podman run -d \
      -p 8000:8000 \
      -v /path/to/env.yaml:/app/env.yaml:ro \
      --name hs-rest-api \
-     docker pull ghcr.io/openadministration/hs.rest-api:v.xy
+     ghcr.io/openadministration/hs.rest-api:v.xy
 ```
 Or docker-compose.yml:
 ```yaml
 services:
      hs-rest-api:
-          image: docker pull ghcr.io/openadministration/hs.rest-api:v.xy
+          image: ghcr.io/openadministration/hs.rest-api:v.xy
           ports:
                - "8000:8000"
           volumes:
